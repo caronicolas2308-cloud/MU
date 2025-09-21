@@ -1,0 +1,103 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum DocumentType {
+  cours
+  exos
+  corr_exos
+  controle
+  corr_controle
+}
+
+model Setting {
+  id                Int    @id @default(autoincrement())
+  signupSesameHash  String
+  maxProfs          Int    @default(10)
+  maxClassesPerProf Int    @default(10)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Admin {
+  id           Int       @id @default(autoincrement())
+  name         String    @unique
+  passwordHash String
+  sessions     Session[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Prof {
+  id           Int       @id @default(autoincrement())
+  name         String    @unique
+  passwordHash String
+  classes      Class[]
+  sessions     Session[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Class {
+  id        Int       @id @default(autoincrement())
+  name      String
+  profId    Int
+  prof      Prof      @relation(fields: [profId], references: [id], onDelete: Cascade)
+  chapters  Chapter[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Contrainte d'unicité : nom de classe unique par professeur
+  @@unique([profId, name], name: "unique_class_name_per_prof")
+}
+
+model Chapter {
+  id        Int        @id @default(autoincrement())
+  classId   Int
+  number    Int
+  title     String
+  class     Class      @relation(fields: [classId], references: [id], onDelete: Cascade)
+  documents Document[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Contrainte d'unicité : numéro de chapitre unique par classe
+  @@unique([classId, number], name: "unique_chapter_number_per_class")
+}
+
+model Document {
+  id           Int          @id @default(autoincrement())
+  chapterId    Int
+  type         DocumentType
+  title        String
+  blobUrl      String
+  fileSize     Int?
+  isProtected  Boolean      @default(false)
+  passwordHash String?
+  chapter      Chapter      @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Contrainte d'unicité : un seul document par type par chapitre
+  @@unique([chapterId, type], name: "unique_document_type_per_chapter")
+}
+
+model Session {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  profId    Int?
+  adminId   Int?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  prof  Prof?  @relation(fields: [profId], references: [id], onDelete: Cascade)
+  admin Admin? @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}

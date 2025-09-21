@@ -1,0 +1,168 @@
+{
+  "client": "Thunder Client",
+  "collectionName": "MU-API",
+  "dateExported": "2025-09-21T12:00:00.000Z",
+  "version": "1.1",
+  "folders": [],
+  "requests": [
+    {
+      "id": "ping",
+      "name": "Debug Ping",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/debug/ping",
+      "tests": [],
+      "created": "2025-09-21T12:00:00.000Z",
+      "modified": "2025-09-21T12:00:00.000Z"
+    },
+    {
+      "id": "settings",
+      "name": "Debug Settings",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/debug/setting",
+      "tests": [],
+      "created": "2025-09-21T12:00:00.000Z",
+      "modified": "2025-09-21T12:00:00.000Z"
+    },
+    {
+      "id": "login",
+      "name": "Login Admin",
+      "method": "POST",
+      "url": "{{baseUrl}}/api/auth/login",
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"name\": \"Admin\",\n  \"password\": \"Admin123\"\n}"
+      },
+      "tests": [],
+      "created": "2025-09-21T12:00:00.000Z",
+      "modified": "2025-09-21T12:00:00.000Z"
+    },
+    {
+      "id": "create-class",
+      "name": "Create Class",
+      "method": "POST",
+      "url": "{{baseUrl}}/api/class/create",
+      "body": {
+        "type": "form",
+        "form": [
+          {
+            "name": "name",
+            "value": "Classe Test"
+          }
+        ]
+      },
+      "tests": [],
+      "created": "2025-09-21T12:00:00.000Z",
+      "modified": "2025-09-21T12:00:00.000Z"
+    },
+    {
+      "id": "update-class",
+      "name": "Update Class",
+      "method": "POST",
+      "url": "{{baseUrl}}/api/class/1",
+      "body": {
+        "type": "form",
+        "form": [
+          {
+            "name": "_method",
+            "value": "PATCH"
+          },
+          {
+            "name": "name",
+            "value": "Classe Renommée"
+          }
+        ]
+      },
+      "tests": [],
+      "created": "2025-09-21T12:00:00.000Z",
+      "modified": "2025-09-21T12:00:00.000Z"
+    },
+    {
+      "id": "delete-class",
+      "name": "Delete Class",
+      "method": "POST",
+      "url": "{{baseUrl}}/api/class/1?_method=DELETE",
+      "tests": [],
+      "created": "2025-09-21T12:00:00.000Z",
+      "modified": "2025-09-21T12:00:00.000Z"
+    },
+    {
+      "id": "create-chapter",
+      "name": "Create Chapter",
+      "method": "POST",
+      "url": "{{baseUrl}}/api/class/1/chapters",
+      "body": {
+        "type": "form",
+        "form": [
+          {
+            "name": "title",
+            "value": "Proba"
+          }
+        ]
+      },
+      "tests": [],
+      "created": "2025-09-21T12:00:00.000Z",
+      "modified": "2025-09-21T12:00:00.000Z"
+    },
+    {
+      "id": "update-chapter",
+      "name": "Update Chapter",
+      "method": "POST",
+      "url": "{{baseUrl}}/api/class/1/chapters/3",
+      "body": {
+        "type": "form",
+        "form": [
+          {
+            "name": "_method",
+            "value": "PATCH"
+          },
+          {
+            "name": "title",
+            "value": "Nouveau titre"
+          }
+        ]
+      },
+      "tests": [],
+      "created": "2025-09-21T12:00:00.000Z",
+      "modified": "2025-09-21T12:00:00.000Z"
+    },
+    {
+      "id": "delete-chapter",
+      "name": "Delete Chapter",
+      "method": "POST",
+      "url": "{{baseUrl}}/api/class/1/chapters/3?_method=DELETE",
+      "tests": [],
+      "created": "2025-09-21T12:00:00.000Z",
+      "modified": "2025-09-21T12:00:00.000Z"
+    },
+    {
+      "id": "get-document",
+      "name": "Get Document",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/documents/1",
+      "tests": [],
+      "created": "2025-09-21T12:00:00.000Z",
+      "modified": "2025-09-21T12:00:00.000Z"
+    },
+    {
+      "id": "download-document",
+      "name": "Download Document",
+      "method": "GET",
+      "url": "{{baseUrl}}/api/documents/1/download",
+      "tests": [],
+      "created": "2025-09-21T12:00:00.000Z",
+      "modified": "2025-09-21T12:00:00.000Z"
+    }
+  ],
+  "environments": [
+    {
+      "id": "local",
+      "name": "Local",
+      "data": [
+        {
+          "name": "baseUrl",
+          "value": "http://localhost:3000"
+        }
+      ]
+    }
+  ]
+}
