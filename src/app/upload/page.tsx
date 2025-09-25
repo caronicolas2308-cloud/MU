@@ -137,7 +137,9 @@ export default function UploadPage() {
       const result = await postForm<{ pages: number }>("/api/upload", formData);
       
       if ("redirect" in result) {
-        router.push(result.redirect);
+        // Extraire le chemin relatif de l'URL absolue
+        const url = new URL(result.redirect);
+        router.push(url.pathname);
       } else {
         setUploadSuccess(true);
         setFileInfo({

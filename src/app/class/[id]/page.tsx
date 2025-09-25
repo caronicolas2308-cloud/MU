@@ -78,7 +78,9 @@ export default function ClassManagementPage({ params }: { params: Promise<{ id: 
       const result = await postForm(`/api/class/${resolvedParams.id}`, formData);
       
       if ("redirect" in result) {
-        router.push(result.redirect);
+        // Extraire le chemin relatif de l'URL absolue
+        const url = new URL(result.redirect);
+        router.push(url.pathname);
       } else {
         setClassData(prev => prev ? { ...prev, name: newClassName } : null);
         setEditingName(false);
@@ -100,7 +102,9 @@ export default function ClassManagementPage({ params }: { params: Promise<{ id: 
       const result = await postForm(`/api/class/${resolvedParams.id}/chapters/${chapterId}`, formData);
       
       if ("redirect" in result) {
-        router.push(result.redirect);
+        // Extraire le chemin relatif de l'URL absolue
+        const url = new URL(result.redirect);
+        router.push(url.pathname);
       } else {
         setClassData(prev => prev ? {
           ...prev,
@@ -132,7 +136,9 @@ export default function ClassManagementPage({ params }: { params: Promise<{ id: 
       const result = await postForm(`/api/class/${resolvedParams.id}/chapters/${chapterId}`, formData);
       
       if ("redirect" in result) {
-        router.push(result.redirect);
+        // Extraire le chemin relatif de l'URL absolue
+        const url = new URL(result.redirect);
+        router.push(url.pathname);
       } else {
         setClassData(prev => prev ? {
           ...prev,
@@ -157,7 +163,9 @@ export default function ClassManagementPage({ params }: { params: Promise<{ id: 
       const result = await postForm(`/api/class/${resolvedParams.id}/chapters`, formData);
       
       if ("redirect" in result) {
-        router.push(result.redirect);
+        // Extraire le chemin relatif de l'URL absolue
+        const url = new URL(result.redirect);
+        router.push(url.pathname);
       } else {
         // Recharger les données pour avoir le nouveau chapitre
         await loadClassData();

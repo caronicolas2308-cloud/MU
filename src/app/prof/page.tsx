@@ -74,7 +74,9 @@ export default function ProfPage() {
       });
 
       if ("redirect" in result) {
-        router.push(result.redirect);
+        // Extraire le chemin relatif de l'URL absolue
+        const url = new URL(result.redirect);
+        router.push(url.pathname);
       } else if (result.success) {
         router.push(`/class/${result.classId}`);
       }
