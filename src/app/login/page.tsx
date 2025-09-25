@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { postJSON } from "@/lib/http";
+import ErrorNote from "@/components/ErrorNote";
 
 export default function LoginPage() {
   const [tab, setTab] = useState<"login"|"signup">("login");
@@ -16,24 +18,18 @@ export default function LoginPage() {
     
     const data = Object.fromEntries(new FormData(e.currentTarget));
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({
-          identifier: data.identifier,
-          password: data.password
-        }),
-        headers: { "Content-Type": "application/json" },
+      const result = await postJSON<{ ok: boolean; role: string }>("/api/auth/login", {
+        identifier: data.identifier,
+        password: data.password
       });
       
-      if (res.ok) {
-        const { role } = await res.json();
-        r.push(role === "admin" ? "/admin" : "/prof");
-      } else {
-        const j = await res.json().catch(() => ({}));
-        setError(j?.error || "Erreur de connexion");
+      if ("redirect" in result) {
+        r.push(result.redirect);
+      } else if (result.ok) {
+        r.push(result.role === "admin" ? "/admin" : "/prof");
       }
     } catch (err) {
-      setError("Erreur de connexion");
+      setError(err instanceof Error ? err.message : "Erreur de connexion");
     } finally {
       setLoading(false);
     }
@@ -46,24 +42,19 @@ export default function LoginPage() {
     
     const data = Object.fromEntries(new FormData(e.currentTarget));
     try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: data.name,
-          password: data.password,
-          sesame: data.sesame,
-        }),
+      const result = await postJSON<{ success: boolean }>("/api/auth/register", {
+        name: data.name,
+        password: data.password,
+        sesame: data.sesame,
       });
       
-      if (res.ok) {
-        window.location.href = "/prof";
-      } else {
-        const j = await res.json().catch(() => ({}));
-        setError(j?.error || "Erreur d'inscription");
+      if ("redirect" in result) {
+        r.push(result.redirect);
+      } else if (result.success) {
+        r.push("/prof");
       }
     } catch (err) {
-      setError("Impossible de contacter le serveur");
+      setError(err instanceof Error ? err.message : "Impossible de contacter le serveur");
     } finally {
       setLoading(false);
     }
@@ -107,7 +98,7 @@ export default function LoginPage() {
 
         {error && (
           <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
-            {error}
+            <ErrorNote message={error} />
           </div>
         )}
 

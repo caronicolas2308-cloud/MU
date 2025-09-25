@@ -3,6 +3,9 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getJSON, postForm, postJSON } from "@/lib/http";
+import LoadingNote from "@/components/LoadingNote";
+import ErrorNote from "@/components/ErrorNote";
 
 type Chapter = {
   id: number;
@@ -40,6 +43,10 @@ export default function ClassManagementPage({ params }: { params: Promise<{ id: 
   const [newChapterTitle, setNewChapterTitle] = useState("");
   const [showAddChapter, setShowAddChapter] = useState(false);
   const [newChapterName, setNewChapterName] = useState("");
+  const [updatingName, setUpdatingName] = useState(false);
+  const [updatingChapter, setUpdatingChapter] = useState<number | null>(null);
+  const [addingChapter, setAddingChapter] = useState(false);
+  const [deletingChapter, setDeletingChapter] = useState<number | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -48,16 +55,12 @@ export default function ClassManagementPage({ params }: { params: Promise<{ id: 
 
   const loadClassData = async () => {
     try {
-      const response = await fetch(`/api/class/${resolvedParams.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setClassData(data);
-        setNewClassName(data.name);
-      } else {
-        setError("Erreur lors du chargement de la classe");
-      }
+      setError("");
+      const data = await getJSON<ClassData>(`/api/class/${resolvedParams.id}`);
+      setClassData(data);
+      setNewClassName(data.name);
     } catch (err) {
-      setError("Erreur de connexion");
+      setError(err instanceof Error ? err.message : "Erreur de connexion");
     } finally {
       setLoading(false);
     }
@@ -66,33 +69,39 @@ export default function ClassManagementPage({ params }: { params: Promise<{ id: 
   const updateClassName = async () => {
     if (!newClassName.trim()) return;
     
+    setUpdatingName(true);
     try {
-      const response = await fetch(`/api/class/${resolvedParams.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newClassName }),
-      });
+      const formData = new FormData();
+      formData.append("name", newClassName);
+      formData.append("_method", "PATCH");
 
-      if (response.ok) {
+      const result = await postForm(`/api/class/${resolvedParams.id}`, formData);
+      
+      if ("redirect" in result) {
+        router.push(result.redirect);
+      } else {
         setClassData(prev => prev ? { ...prev, name: newClassName } : null);
         setEditingName(false);
-      } else {
-        setError("Erreur lors de la mise à jour du nom");
       }
     } catch (err) {
-      setError("Erreur de connexion");
+      setError(err instanceof Error ? err.message : "Erreur lors de la mise à jour du nom");
+    } finally {
+      setUpdatingName(false);
     }
   };
 
   const updateChapterTitle = async (chapterId: number, newTitle: string) => {
+    setUpdatingChapter(chapterId);
     try {
-      const response = await fetch(`/api/class/${resolvedParams.id}/chapters/${chapterId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newTitle }),
-      });
+      const formData = new FormData();
+      formData.append("title", newTitle);
+      formData.append("_method", "PATCH");
 
-      if (response.ok) {
+      const result = await postForm(`/api/class/${resolvedParams.id}/chapters/${chapterId}`, formData);
+      
+      if ("redirect" in result) {
+        router.push(result.redirect);
+      } else {
         setClassData(prev => prev ? {
           ...prev,
           chapters: prev.chapters.map(ch => 
@@ -100,11 +109,11 @@ export default function ClassManagementPage({ params }: { params: Promise<{ id: 
           )
         } : null);
         setEditingChapter(null);
-      } else {
-        setError("Erreur lors de la mise à jour du chapitre");
       }
     } catch (err) {
-      setError("Erreur de connexion");
+      setError(err instanceof Error ? err.message : "Erreur lors de la mise à jour du chapitre");
+    } finally {
+      setUpdatingChapter(null);
     }
   };
 
@@ -115,54 +124,59 @@ export default function ClassManagementPage({ params }: { params: Promise<{ id: 
       return;
     }
 
+    setDeletingChapter(chapterId);
     try {
-      const response = await fetch(`/api/class/${resolvedParams.id}/chapters/${chapterId}`, {
-        method: "DELETE",
-      });
+      const formData = new FormData();
+      formData.append("_method", "DELETE");
 
-      if (response.ok) {
+      const result = await postForm(`/api/class/${resolvedParams.id}/chapters/${chapterId}`, formData);
+      
+      if ("redirect" in result) {
+        router.push(result.redirect);
+      } else {
         setClassData(prev => prev ? {
           ...prev,
           chapters: prev.chapters.filter(ch => ch.id !== chapterId)
         } : null);
-      } else {
-        setError("Erreur lors de la suppression du chapitre");
       }
     } catch (err) {
-      setError("Erreur de connexion");
+      setError(err instanceof Error ? err.message : "Erreur lors de la suppression du chapitre");
+    } finally {
+      setDeletingChapter(null);
     }
   };
 
   const addChapter = async () => {
     if (!newChapterName.trim()) return;
 
+    setAddingChapter(true);
     try {
-      const response = await fetch(`/api/class/${resolvedParams.id}/chapters`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newChapterName }),
-      });
+      const formData = new FormData();
+      formData.append("title", newChapterName);
 
-      if (response.ok) {
-        const newChapter = await response.json();
-        setClassData(prev => prev ? {
-          ...prev,
-          chapters: [...prev.chapters, newChapter]
-        } : null);
+      const result = await postForm(`/api/class/${resolvedParams.id}/chapters`, formData);
+      
+      if ("redirect" in result) {
+        router.push(result.redirect);
+      } else {
+        // Recharger les données pour avoir le nouveau chapitre
+        await loadClassData();
         setNewChapterName("");
         setShowAddChapter(false);
-      } else {
-        setError("Erreur lors de l'ajout du chapitre");
       }
     } catch (err) {
-      setError("Erreur de connexion");
+      setError(err instanceof Error ? err.message : "Erreur lors de l'ajout du chapitre");
+    } finally {
+      setAddingChapter(false);
     }
   };
 
   if (loading) {
     return (
       <main className="max-w-4xl mx-auto py-6">
-        <div className="text-center">Chargement...</div>
+        <div className="text-center">
+          <LoadingNote />
+        </div>
       </main>
     );
   }
@@ -170,8 +184,8 @@ export default function ClassManagementPage({ params }: { params: Promise<{ id: 
   if (error || !classData) {
     return (
       <main className="max-w-4xl mx-auto py-6">
-        <div className="text-center text-red-600">
-          {error || "Classe non trouvée"}
+        <div className="text-center">
+          {error ? <ErrorNote message={error} /> : <p>Classe non trouvée</p>}
         </div>
         <div className="text-center mt-4">
           <Link href="/prof" className="text-blue-500 hover:text-blue-700">
@@ -207,9 +221,10 @@ export default function ClassManagementPage({ params }: { params: Promise<{ id: 
                 />
                 <button
                   onClick={updateClassName}
-                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+                  disabled={updatingName}
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors disabled:opacity-50"
                 >
-                  Valider
+                  {updatingName ? "Mise à jour..." : "Valider"}
                 </button>
                 <button
                   onClick={() => {
@@ -257,9 +272,10 @@ export default function ClassManagementPage({ params }: { params: Promise<{ id: 
                         />
                         <button
                           onClick={() => updateChapterTitle(chapter.id, newChapterTitle)}
-                          className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
+                          disabled={updatingChapter === chapter.id}
+                          className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 disabled:opacity-50"
                         >
-                          Valider
+                          {updatingChapter === chapter.id ? "Mise à jour..." : "Valider"}
                         </button>
                         <button
                           onClick={() => {
@@ -289,9 +305,10 @@ export default function ClassManagementPage({ params }: { params: Promise<{ id: 
                   {chapter.number > 2 && (
                     <button
                       onClick={() => deleteChapter(chapter.id)}
-                      className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600"
+                      disabled={deletingChapter === chapter.id}
+                      className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 disabled:opacity-50"
                     >
-                      Supprimer
+                      {deletingChapter === chapter.id ? "Suppression..." : "Supprimer"}
                     </button>
                   )}
                 </div>
@@ -333,9 +350,10 @@ export default function ClassManagementPage({ params }: { params: Promise<{ id: 
                   />
                   <button
                     onClick={addChapter}
-                    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+                    disabled={addingChapter}
+                    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors disabled:opacity-50"
                   >
-                    Valider
+                    {addingChapter ? "Ajout..." : "Valider"}
                   </button>
                   <button
                     onClick={() => {

@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getJSON, postJSON } from "@/lib/http";
+import LoadingNote from "@/components/LoadingNote";
+import ErrorNote from "@/components/ErrorNote";
 
 type Class = {
   id: number;
@@ -17,7 +20,10 @@ type Class = {
 export default function ProfPage() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [creatingClass, setCreatingClass] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -26,15 +32,12 @@ export default function ProfPage() {
 
   const loadData = async () => {
     try {
-      const response = await fetch("/api/prof/profile");
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-        setClasses(data.classes || []);
-      } else {
-        router.push("/login");
-      }
+      setError(null);
+      const data = await getJSON<{ user: any; classes: Class[] }>("/api/prof/profile");
+      setUser(data.user);
+      setClasses(data.classes || []);
     } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur de chargement");
       router.push("/login");
     } finally {
       setLoading(false);
@@ -48,18 +51,37 @@ export default function ProfPage() {
     }
 
     try {
-      const response = await fetch(`/api/class/${classId}`, {
-        method: "DELETE",
+      await getJSON(`/api/class/${classId}`, { method: "DELETE" });
+      // Recharger la liste des classes
+      await loadData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erreur lors de la suppression");
+    }
+  }
+
+  // Fonction pour créer une classe
+  async function createClass(className: string) {
+    setCreatingClass(true);
+    setCreateError(null);
+    
+    try {
+      const result = await postJSON<{ success: boolean; classId: number }>("/api/class/create", {
+        name: className,
+        chapters: [
+          { title: "Chapitre 1" },
+          { title: "Chapitre 2" }
+        ]
       });
 
-      if (response.ok) {
-        // Recharger la page pour mettre à jour la liste
-        window.location.reload();
-      } else {
-        alert("Erreur lors de la suppression de la classe");
+      if ("redirect" in result) {
+        router.push(result.redirect);
+      } else if (result.success) {
+        router.push(`/class/${result.classId}`);
       }
     } catch (err) {
-      alert("Erreur de connexion");
+      setCreateError(err instanceof Error ? err.message : "Erreur lors de la création");
+    } finally {
+      setCreatingClass(false);
     }
   }
 
@@ -67,20 +89,17 @@ export default function ProfPage() {
     return (
       <main className="max-w-4xl mx-auto py-6">
         <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p>Chargement...</p>
-          </div>
+          <LoadingNote />
         </div>
       </main>
     );
   }
 
-  if (!user) {
+  if (error || !user) {
     return (
       <main className="max-w-4xl mx-auto py-6">
         <div className="text-center">
-          <p>Erreur de chargement</p>
+          {error ? <ErrorNote message={error} /> : <p>Erreur de chargement</p>}
         </div>
       </main>
     );
@@ -143,21 +162,29 @@ export default function ProfPage() {
       <section className="mb-8">
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Créer une classe</h2>
-          <form id="createClassForm" className="flex gap-3">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const className = formData.get("name") as string;
+            if (className) createClass(className);
+          }} className="flex gap-3">
             <input
               type="text"
               name="name"
               placeholder="Nom de la classe (ex. Terminale A, 2nde B)"
               required
+              disabled={creatingClass}
               className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button 
               type="submit"
-              className="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600 active:bg-green-700 transition-colors"
+              disabled={creatingClass}
+              className="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600 active:bg-green-700 transition-colors disabled:opacity-50"
             >
-              Valider
+              {creatingClass ? "Création..." : "Valider"}
             </button>
           </form>
+          {createError && <ErrorNote message={createError} />}
           <p className="text-sm text-gray-600 mt-3">
             À la création, <strong>Chapitre 1</strong> et <strong>Chapitre 2</strong> sont générés automatiquement avec la rubrique SERENA.
           </p>
@@ -182,39 +209,6 @@ export default function ProfPage() {
         </div>
       </section>
 
-      <script dangerouslySetInnerHTML={{
-        __html: `
-          document.getElementById('createClassForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            const className = formData.get('name');
-            
-            try {
-              const response = await fetch('/api/class/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  name: className,
-                  chapters: [
-                    { number: 1, title: 'Chapitre 1' },
-                    { number: 2, title: 'Chapitre 2' }
-                  ]
-                })
-              });
-              
-              if (response.ok) {
-                const data = await response.json();
-                window.location.href = '/class/' + data.classId;
-              } else {
-                const error = await response.json();
-                alert('Erreur: ' + (error.error || 'Erreur lors de la création'));
-              }
-            } catch (err) {
-              alert('Erreur de connexion');
-            }
-          });
-        `
-      }} />
     </main>
   );
 }

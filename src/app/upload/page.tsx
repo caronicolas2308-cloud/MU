@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getJSON, postForm } from "@/lib/http";
+import LoadingNote from "@/components/LoadingNote";
+import ErrorNote from "@/components/ErrorNote";
 
 type Class = {
   id: number;
@@ -35,6 +38,8 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [fileInfo, setFileInfo] = useState<{ pages: number; size: string } | null>(null);
+  const [loadingClasses, setLoadingClasses] = useState(true);
+  const [classesError, setClassesError] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -45,13 +50,13 @@ export default function UploadPage() {
 
   const loadClasses = async () => {
     try {
-      const response = await fetch("/api/class");
-      if (response.ok) {
-        const data = await response.json();
-        setClasses(data);
-      }
+      setClassesError(null);
+      const data = await getJSON<Class[]>("/api/class");
+      setClasses(data);
     } catch (err) {
-      setError("Erreur lors du chargement des classes");
+      setClassesError(err instanceof Error ? err.message : "Erreur lors du chargement des classes");
+    } finally {
+      setLoadingClasses(false);
     }
   };
 
@@ -129,24 +134,19 @@ export default function UploadPage() {
         formData.append("password", password);
       }
 
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      const result = await postForm<{ pages: number }>("/api/upload", formData);
+      
+      if ("redirect" in result) {
+        router.push(result.redirect);
+      } else {
         setUploadSuccess(true);
         setFileInfo({
-          pages: data.pages,
+          pages: result.pages,
           size: formatFileSize(file.size)
         });
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Erreur lors de l'upload");
       }
     } catch (err) {
-      setError("Erreur de connexion");
+      setError(err instanceof Error ? err.message : "Erreur de connexion");
     } finally {
       setUploading(false);
     }
@@ -219,7 +219,7 @@ export default function UploadPage() {
 
       {error && (
         <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-          {error}
+          <ErrorNote message={error} />
         </div>
       )}
 
@@ -313,20 +313,30 @@ export default function UploadPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Classe
               </label>
-              <select
-                value={selectedClass}
-                onChange={(e) => {
-                  setSelectedClass(Number(e.target.value) || "");
-                  setSelectedChapter("");
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">— Sélectionner une classe —</option>
-                {classes.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              {loadingClasses ? (
+                <div className="w-full px-3 py-2 border border-gray-300 rounded bg-gray-50">
+                  <LoadingNote />
+                </div>
+              ) : classesError ? (
+                <div className="w-full px-3 py-2 border border-red-300 rounded bg-red-50">
+                  <ErrorNote message={classesError} />
+                </div>
+              ) : (
+                <select
+                  value={selectedClass}
+                  onChange={(e) => {
+                    setSelectedClass(Number(e.target.value) || "");
+                    setSelectedChapter("");
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">— Sélectionner une classe —</option>
+                  {classes.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Sélection chapitre */}
