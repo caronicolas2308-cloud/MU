@@ -11,7 +11,7 @@ type Chapter = {
   id: number;
   number: number;
   title: string;
-  documents: Array<{
+  documents?: Array<{
     id: number;
     type: string;
     title: string;
@@ -318,7 +318,7 @@ export default function ClassManagementPage({ params }: { params: Promise<{ id: 
                   <p className="text-sm text-gray-600 mb-2">Rubriques SERENA :</p>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                     {SERENA_RUBRICS.map((rubric) => {
-                      const doc = chapter.documents.find(d => d.type === rubric.toLowerCase().replace(' ', '_'));
+                      const doc = chapter.documents?.find(d => d.type === rubric.toLowerCase().replace(' ', '_'));
                       return (
                         <div
                           key={rubric}
