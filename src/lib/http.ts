@@ -30,7 +30,7 @@ export async function getJSON<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 /**
- * POST FormData avec gestion des redirections 302/303
+ * POST FormData avec gestion des redirections 302/303/307
  */
 export async function postForm<T>(
   url: string, 
@@ -43,8 +43,8 @@ export async function postForm<T>(
     redirect: "manual", // On gère manuellement les redirections
   });
 
-  // Si redirection (302/303), on retourne l'URL de destination
-  if (response.status === 302 || response.status === 303) {
+  // Si redirection (302/303/307), on retourne l'URL de destination
+  if (response.status === 302 || response.status === 303 || response.status === 307) {
     const location = response.headers.get("location");
     if (location) {
       return { redirect: location };
@@ -83,8 +83,8 @@ export async function postJSON<T>(
     redirect: "manual",
   });
 
-  // Si redirection (302/303), on retourne l'URL de destination
-  if (response.status === 302 || response.status === 303) {
+  // Si redirection (302/303/307), on retourne l'URL de destination
+  if (response.status === 302 || response.status === 303 || response.status === 307) {
     const location = response.headers.get("location");
     if (location) {
       return { redirect: location };
