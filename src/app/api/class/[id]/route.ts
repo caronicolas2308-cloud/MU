@@ -6,12 +6,13 @@ import { getCurrentUser } from "@/lib/auth";
 // GET /api/class/:id  -> détail + chapitres
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getCurrentUser();
   if (user.role !== "prof") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const id = Number(params.id);
+  const { id: idParam } = await params;
+  const id = Number(idParam);
   const klass = await prisma.class.findFirst({
     where: { id, profId: user.prof!.id },
     include: { chapters: { orderBy: { number: "asc" } } },
@@ -23,7 +24,7 @@ export async function GET(
 // PATCH /api/class/:id  -> renommer la classe
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Form fallback: on passe _method=PATCH via form
   const url = new URL(req.url);
@@ -38,7 +39,8 @@ export async function POST(
   const user = await getCurrentUser();
   if (user.role !== "prof") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const id = Number(params.id);
+  const { id: idParam } = await params;
+  const id = Number(idParam);
   const body = await req.formData();
   const name = String(body.get("name") || "").trim();
   if (!name) return NextResponse.json({ error: "Nom requis" }, { status: 400 });
@@ -53,12 +55,13 @@ export async function POST(
 // DELETE /api/class/:id  -> supprimer la classe
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getCurrentUser();
   if (user.role !== "prof") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const id = Number(params.id);
+  const { id: idParam } = await params;
+  const id = Number(idParam);
   
   // Vérifier que la classe appartient au prof
   const exists = await prisma.class.findFirst({ where: { id, profId: user.prof!.id } });

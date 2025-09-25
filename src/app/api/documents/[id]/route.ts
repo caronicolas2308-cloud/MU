@@ -5,10 +5,11 @@ import { hash } from "@/lib/auth";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const documentId = parseInt(params.id);
+    const { id } = await params;
+    const documentId = parseInt(id);
     const password = request.nextUrl.searchParams.get("password");
 
     const document = await prisma.document.findUnique({
